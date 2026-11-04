@@ -27,9 +27,6 @@ canvas { display: block; width: 100%; height: 100%; cursor: none; touch-action: 
 }
 @media (prefers-reduced-motion: reduce) { #remaining.pulse-rescue, #remaining.pulse-loss { animation-duration: 160ms; } }
 
-#road-controls { position: fixed; z-index: 3; left: 16px; right: 16px; bottom: 12px; display: flex; gap: 10px; align-items: center; justify-content: center; color: #9ca993; font: 11px/1.5 sans-serif; text-align: center; pointer-events: none; }
-#road-done { flex-shrink: 0; pointer-events: auto; color: #e1dbb6; background: #18221b; border: 1px solid #5f725c; border-radius: 5px; padding: 6px 10px; cursor: pointer; }
-#road-done[hidden] { display: none; }
 
 #sound-toggle { position: fixed; z-index: 4; right: 18px; top: 18px; width: 36px; height: 36px; padding: 8px; border: 0; border-radius: 50%; background: transparent; color: #aebba5; opacity: .72; cursor: pointer; }
 #sound-toggle:hover, #sound-toggle:focus-visible { opacity: 1; background: #243028; }
@@ -37,8 +34,3 @@ canvas { display: block; width: 100%; height: 100%; cursor: none; touch-action: 
 #sound-toggle svg { width: 100%; height: 100%; fill: none; stroke: currentColor; stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round; }
 #sound-toggle[data-state="on"] .sound-slash, #sound-toggle[data-state="off"] .sound-waves { display: none; }
 
-#sound-toggle { display: flex; align-items: center; justify-content: center; gap: 7px; }
-#sound-toggle svg { flex: 0 0 20px; height: 20px; }
-#sound-toggle[data-state="off"] { width: auto; min-width: 106px; border-radius: 18px; padding: 8px 12px; background: #16221b; border: 1px solid #a58e55; color: #ead6a1; opacity: 1; }
-.sound-label { white-space: nowrap; font: 12px/1.2 sans-serif; }
-#sound-toggle[data-state="on"] .sound-label { display: none; }

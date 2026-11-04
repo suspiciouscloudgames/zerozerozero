@@ -9,8 +9,6 @@ function syncSoundButton() {
   soundToggle.dataset.state = audible ? 'on' : 'off';
   soundToggle.setAttribute('aria-label', audible ? '소리 끄기' : '소리 켜기');
   soundToggle.setAttribute('aria-pressed', String(audible));
-  soundToggle.title = audible ? '소리 끄기' : '소리 켜기';
-  soundToggle.querySelector('.sound-label').textContent = audible ? '' : '소리 켜기';
 }
 sound.onStateChange = syncSoundButton;
 syncSoundButton();
@@ -28,7 +26,6 @@ const camera = { x: WORLD.width / 2, y: WORLD.height / 2, scale: ZOOMS[0], fromX
 const pointer = { x: innerWidth / 2, y: innerHeight / 2, inside: false, worldX: WORLD.width / 2, worldY: WORLD.height / 2 };
 let dragState = null;
 let roadTool = null;
-const roadDone = document.querySelector('#road-done');
 const particles = [];
 const brushTraces = [];
 let activeHiddenAnimals = [];
@@ -371,7 +368,6 @@ function nearestRoadPoint(x, y) {
   return closest;
 }
 function endRoadTool() { roadTool = null; dragState = null; }
-roadDone.addEventListener('click', endRoadTool);
 addEventListener('keydown', event => { if (event.key === 'Escape') endRoadTool(); });
 canvas.addEventListener('contextmenu', event => event.preventDefault());
 function soundView() {
@@ -1485,7 +1481,6 @@ function update(dt) {
   const cursorWorld = screenToWorld(pointer.x, pointer.y);
   pointer.worldX = cursorWorld.x; pointer.worldY = cursorWorld.y;
   forest.update(dt);
-  roadDone.hidden = !roadTool;
   // Bend each visible hiding patch once, regardless of how many animals share it.
   activeHiddenAnimals = [];
   if (camera.zoomIndex >= 3) {
