@@ -405,6 +405,9 @@ canvas.addEventListener('pointerup', event => {
   const fakeToaster = nearestVisibleToaster(pointer.x, pointer.y);
   if (fakeToaster) {
     const oldX = fakeToaster.x, oldY = fakeToaster.y;
+    sound.popToaster({ x: oldX, y: oldY }, {
+      x: camera.x, y: camera.y, radius: scopeRadius() / (camera.scale * fitScale())
+    });
     moveFakeSmokeSignal(fakeToaster);
     burst(oldX, oldY, 12, '#c4c8ad', 42);
     return;

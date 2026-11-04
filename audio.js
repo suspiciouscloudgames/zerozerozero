@@ -171,6 +171,16 @@ class ForestAudio {
     source.start(now, Math.random() * 5, .25);
   }
 
+  popToaster(position, view) {
+    if (!this.context || this.context.state !== 'running' || this.muted || document.hidden) return;
+    const spatial = ForestAudio.spatial(position, view);
+    const now = this.context.currentTime, volume = Math.max(.3, spatial.gain);
+    // A tiny rounded pop, distinct from the longer discovery boing.
+    this.tone(now, .16, [680, 340, 170], .16 * volume, spatial.pan);
+    this.tone(now + .008, .065, [1150, 720], .035 * volume, spatial.pan);
+    this.nextToaster = Math.max(this.nextToaster, now + .4);
+  }
+
   discoverToaster(signal, view) {
     const position = `${signal.x},${signal.y}`;
     if (this.toasters.get(signal) === position) return;
