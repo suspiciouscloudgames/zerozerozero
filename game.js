@@ -2,6 +2,24 @@ const canvas = document.querySelector('#forest');
 const ctx = canvas.getContext('2d', { alpha: false });
 const counter = document.querySelector('#remaining');
 const forest = new Forest();
+const sound = new ForestAudio();
+const soundToggle = document.querySelector('#sound-toggle');
+function syncSoundButton() {
+  const audible = !sound.muted && sound.context?.state === 'running';
+  soundToggle.dataset.state = audible ? 'on' : 'off';
+  soundToggle.setAttribute('aria-label', audible ? '소리 끄기' : '소리 켜기');
+  soundToggle.setAttribute('aria-pressed', String(audible));
+  soundToggle.title = audible ? '소리 끄기' : '소리 켜기';
+}
+sound.onStateChange = syncSoundButton;
+syncSoundButton();
+soundToggle.addEventListener('click', () => sound.toggle());
+for (const type of ['pointerdown', 'keydown']) {
+  document.addEventListener(type, event => {
+    if (!event.target.closest?.('#sound-toggle')) sound.unlock();
+  }, { capture: true });
+}
+document.addEventListener('visibilitychange', () => sound.visibilityChanged());
 
 const camera = { x: WORLD.width / 2, y: WORLD.height / 2, scale: ZOOMS[0], fromX: WORLD.width / 2, fromY: WORLD.height / 2, fromScale: ZOOMS[0], toX: WORLD.width / 2, toY: WORLD.height / 2, toScale: ZOOMS[0], elapsed: 2.4, duration: 2.4, zoomStep: 0, zoomIndex: 1 };
 const pointer = { x: innerWidth / 2, y: innerHeight / 2, inside: false, worldX: WORLD.width / 2, worldY: WORLD.height / 2 };
@@ -1450,6 +1468,11 @@ function update(dt) {
       activeHiddenAnimals.push(animal);
     }
   }
+  sound.update(dt, {
+    view: { x: camera.x, y: camera.y, radius: scopeRadius() / (camera.scale * fitScale()) },
+    trees: forest.trees, toasters: forest.smokeSignals, hidden: activeHiddenAnimals,
+    stage: camera.zoomIndex, zooming: zooming(), time: forest.time, ended: forest.ended
+  });
   for (let i = brushTraces.length - 1; i >= 0; i--) {
     if (forest.time - brushTraces[i].time > 1.35) brushTraces.splice(i, 1);
   }
