@@ -374,10 +374,16 @@ function endRoadTool() { roadTool = null; dragState = null; }
 roadDone.addEventListener('click', endRoadTool);
 addEventListener('keydown', event => { if (event.key === 'Escape') endRoadTool(); });
 canvas.addEventListener('contextmenu', event => event.preventDefault());
+function soundView() {
+  return { x: camera.x, y: camera.y, radius: scopeRadius() / (camera.scale * fitScale()) };
+}
 function extendRoad(point) {
   if (!roadTool || camera.zoomIndex < 4 || zooming()) return;
   const zone = forest.safeZones.find(z => distance(z, point) < 26);
+  const before = forest.roadSequence;
   roadTool.anchor = forest.addRoadSegment(roadTool.anchor, zone || point);
+  const placed = forest.roadSequence - before;
+  if (placed > 0) forest.events.push({ type: 'road-placed', ...roadTool.anchor, cells: placed });
   if (zone && forest.roadCellAt(roadTool.anchor.x, roadTool.anchor.y).id === forest.roadCellAt(zone.x, zone.y).id) endRoadTool();
 }
 canvas.addEventListener('pointerdown', event => {
@@ -396,8 +402,12 @@ canvas.addEventListener('pointerup', event => {
   if (dragged || event.button === 2 || forest.ended || zooming() || !pointer.inside) return;
   const handle = nearestRoadHandle(pointer.x, pointer.y);
   if (handle) {
+    const before = forest.roadSequence;
     const anchor = forest.startRoad(handle.groupId);
-    if (anchor) roadTool = { anchor };
+    if (anchor) {
+      roadTool = { anchor };
+      if (forest.roadSequence > before) forest.events.push({ type: 'road-placed', ...anchor, cells: forest.roadSequence - before });
+    }
     return;
   }
   const ember = nearestVisibleFireEmber(pointer.x, pointer.y);
@@ -1500,6 +1510,8 @@ function update(dt) {
   if (forest.events.length) {
     for (const event of forest.events.splice(0)) {
       if (event.type === 'count') { counter.textContent = String(Math.max(0, event.remaining)).padStart(3, '0'); pulseCounter(event.reason); }
+      else if (event.type === 'clear') sound.extinguish(event, soundView());
+      else if (event.type === 'road-placed') sound.placeRoad(event, soundView(), event.cells);
       else if (event.type === 'outcome') pulseCounter(event.result === 'lost' ? 'loss' : 'rescue');
       else if (event.type === 'end') { endTime = performance.now(); endRoadTool(); }
       else if (event.type === 'burned') burst(event.x, event.y, 14, '#e78851', 25);

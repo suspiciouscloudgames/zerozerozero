@@ -74,6 +74,13 @@ class ForestAudio {
       const strokes = .18 + .82 * Math.sin(t * 23) ** 6;
       return high * swish * strokes * .32;
     });
+    this.buffers.water = this.buffer(.72, 1, (t, i, state) => {
+      const white = Math.random() * 2 - 1;
+      state.low = (state.low || 0) * .7 + white * .3;
+      const spray = Math.min(1, t / .025) * Math.exp(-t * 6);
+      const steam = t < .13 ? 0 : Math.sin(Math.PI * Math.min(1, (t - .13) / .59)) * .26;
+      return (state.low * .65 + white * .2) * (spray + steam);
+    });
     this.buffers.whisper = this.buffer(1.5, 1, (t, i, state) => {
       // Unvoiced breath with irregular syllable-shaped envelopes: no words or pitch.
       const white = Math.random() * 2 - 1;
@@ -186,6 +193,37 @@ class ForestAudio {
     source.connect(filter); filter.connect(gain); gain.connect(pan); pan.connect(this.master);
     source.onended = () => { source.disconnect(); filter.disconnect(); gain.disconnect(); pan.disconnect(); };
     source.start(now, Math.random() * 5, .25);
+  }
+
+  extinguish(position, view) {
+    if (!this.context || this.context.state !== 'running' || this.muted || document.hidden) return;
+    const c = this.context, spatial = ForestAudio.spatial(position, view);
+    const source = c.createBufferSource(), filter = c.createBiquadFilter();
+    const gain = c.createGain(), pan = c.createStereoPanner();
+    const now = c.currentTime, volume = Math.max(.35, spatial.gain);
+    source.buffer = this.buffers.water;
+    filter.type = 'lowpass'; filter.Q.value = .7;
+    filter.frequency.setValueAtTime(5200, now);
+    filter.frequency.exponentialRampToValueAtTime(1200, now + .7);
+    gain.gain.value = volume * .72; pan.pan.value = spatial.pan;
+    source.connect(filter); filter.connect(gain); gain.connect(pan); pan.connect(this.master);
+    source.onended = () => { source.disconnect(); filter.disconnect(); gain.disconnect(); pan.disconnect(); };
+    source.start(now);
+    // A few small falling droplets sit beneath the spray and cooling hiss.
+    for (let i = 0; i < 3; i++) this.tone(now + .06 + i * .07, .085,
+      [1200 - i * 180, 420 - i * 45], .035 * volume, spatial.pan);
+  }
+
+  placeRoad(position, view, cells = 1) {
+    if (cells <= 0 || !this.context || this.context.state !== 'running' || this.muted || document.hidden) return;
+    const spatial = ForestAudio.spatial(position, view), now = this.context.currentTime;
+    const volume = Math.max(.35, spatial.gain);
+    // Soft wooden ticks follow a short trail, capped at three notes per click.
+    const steps = Math.min(3, 1 + Math.floor(cells / 8));
+    for (let i = 0; i < steps; i++) {
+      this.tone(now + i * .045, .08, [460 + i * 65, 190 + i * 25], .085 * volume, spatial.pan, 'triangle');
+    }
+    this.tone(now + (steps - 1) * .045, .13, [1100, 1380], .025 * volume, spatial.pan);
   }
 
   whisperSign(position, view) {
