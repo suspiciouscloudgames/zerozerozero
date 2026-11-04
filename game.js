@@ -1488,6 +1488,7 @@ function update(dt) {
   sound.update(dt, {
     view: { x: camera.x, y: camera.y, radius: scopeRadius() / (camera.scale * fitScale()) },
     trees: forest.trees, toasters: forest.smokeSignals, hidden: activeHiddenAnimals,
+    signs: forestSigns, probe: { x: pointer.worldX, y: pointer.worldY, inside: pointer.inside },
     stage: camera.zoomIndex, zooming: zooming(), time: forest.time, ended: forest.ended
   });
   for (let i = brushTraces.length - 1; i >= 0; i--) {

@@ -10,6 +10,10 @@ class ForestAudio {
     this.nextRustle = 0;
     this.nextIgnition = 0;
     this.nextToaster = 0;
+    this.signCooldowns = new WeakMap();
+    this.nearSigns = new Set();
+    this.signProbe = null;
+    this.nextWhisper = 0;
     this.tick = 0;
     try { this.muted = localStorage.getItem('000-muted') === 'true'; } catch {}
   }
@@ -66,6 +70,15 @@ class ForestAudio {
       const swish = Math.sin(Math.PI * Math.min(1, t / .68)) ** 1.4;
       const strokes = .18 + .82 * Math.sin(t * 23) ** 6;
       return high * swish * strokes * .32;
+    });
+    this.buffers.whisper = this.buffer(1.5, 1, (t, i, state) => {
+      // Unvoiced breath with irregular syllable-shaped envelopes: no words or pitch.
+      const white = Math.random() * 2 - 1;
+      state.low = (state.low || 0) * .85 + white * .15;
+      const syllables = [[.16,.085], [.41,.12], [.69,.075], [1.02,.16], [1.29,.07]];
+      let envelope = 0;
+      for (const [center, spread] of syllables) envelope += Math.exp(-(((t - center) / spread) ** 2));
+      return (white - state.low) * Math.min(1, envelope) * (.35 + .12 * Math.sin(t * 61));
     });
     this.ambience = this.loop(this.buffers.wind, 'lowpass', 1900);
     this.ambience.gain.gain.value = .16;
@@ -171,6 +184,60 @@ class ForestAudio {
     source.start(now, Math.random() * 5, .25);
   }
 
+  whisperSign(position, view) {
+    if (!this.context || this.context.state !== 'running' || this.muted || document.hidden) return;
+    const c = this.context, spatial = ForestAudio.spatial(position, view);
+    const volume = .35 + .65 * spatial.gain;
+    // Two overlapping, airy fragments with shifting mouth resonances, never voiced speech.
+    for (let layer = 0; layer < 2; layer++) {
+      const source = c.createBufferSource(), low = c.createBiquadFilter(), high = c.createBiquadFilter();
+      const gain = c.createGain(), pan = c.createStereoPanner();
+      const start = c.currentTime + layer * .18;
+      source.buffer = this.buffers.whisper;
+      source.playbackRate.value = .92 + Math.random() * .18;
+      low.type = high.type = 'bandpass'; low.Q.value = 3.5; high.Q.value = 4;
+      low.frequency.setValueAtTime(850 + layer * 180, start);
+      high.frequency.setValueAtTime(2600 - layer * 250, start);
+      for (let i = 1; i <= 5; i++) {
+        low.frequency.exponentialRampToValueAtTime(650 + Math.random() * 800, start + i * .26);
+        high.frequency.exponentialRampToValueAtTime(1600 + Math.random() * 1500, start + i * .26);
+      }
+      gain.gain.value = volume * (layer ? .34 : .46);
+      pan.pan.value = Math.max(-.95, Math.min(.95, spatial.pan + (layer ? .12 : -.12)));
+      source.connect(low); source.connect(high); low.connect(gain); high.connect(gain);
+      gain.connect(pan); pan.connect(this.master);
+      source.onended = () => { source.disconnect(); low.disconnect(); high.disconnect(); gain.disconnect(); pan.disconnect(); };
+      source.start(start);
+    }
+  }
+
+  updateSigns(scene) {
+    const probe = scene.probe;
+    if (scene.stage < 2 || scene.ended || scene.zooming || !probe?.inside) {
+      this.signProbe = null; this.nearSigns.clear(); return;
+    }
+    const from = this.signProbe || probe;
+    this.signProbe = { x: probe.x, y: probe.y };
+    const dx = probe.x - from.x, dy = probe.y - from.y, length = dx * dx + dy * dy;
+    const radius = Math.max(6, scene.view.radius * .16), near = new Set(), crossings = [];
+    for (const sign of scene.signs || []) {
+      if (Math.hypot(sign.x - scene.view.x, sign.y - scene.view.y) > scene.view.radius) continue;
+      const y = sign.y - 6 * (sign.scale || 1);
+      const distance = Math.hypot(sign.x - probe.x, y - probe.y);
+      if (distance < radius * 1.25) near.add(sign);
+      const t = length ? Math.max(0, Math.min(1, ((sign.x - from.x) * dx + (y - from.y) * dy) / length)) : 0;
+      const sweptDistance = Math.hypot(sign.x - from.x - dx * t, y - from.y - dy * t);
+      if (!this.nearSigns.has(sign) && sweptDistance < radius &&
+          this.context.currentTime >= (this.signCooldowns.get(sign) || 0)) crossings.push({ sign, distance });
+    }
+    this.nearSigns = near;
+    if (this.context.currentTime < this.nextWhisper || !crossings.length) return;
+    const { sign } = crossings.sort((a,b) => a.distance - b.distance)[0];
+    this.whisperSign(sign, scene.view);
+    this.signCooldowns.set(sign, this.context.currentTime + 9);
+    this.nextWhisper = this.context.currentTime + 2;
+  }
+
   popToaster(position, view) {
     if (!this.context || this.context.state !== 'running' || this.muted || document.hidden) return;
     const spatial = ForestAudio.spatial(position, view);
@@ -193,7 +260,9 @@ class ForestAudio {
   }
 
   update(dt, scene) {
-    if (!this.context || this.context.state !== 'running' || this.muted || document.hidden) return;
+    if (!this.context || this.context.state !== 'running' || this.muted || document.hidden) {
+      this.signProbe = null; this.nearSigns.clear(); return;
+    }
     this.tick += dt;
     if (this.tick < .09) return;
     this.tick = 0;
@@ -232,6 +301,7 @@ class ForestAudio {
       }
       this.nextBird = now + 4 + Math.random() * 6;
     }
+    this.updateSigns(scene);
     if (scene.ended || scene.zooming) return;
     if (scene.stage >= 2) {
       for (const signal of scene.toasters) {
