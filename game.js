@@ -13,14 +13,11 @@ function syncSoundButton() {
 sound.onStateChange = syncSoundButton;
 syncSoundButton();
 soundToggle.addEventListener('click', () => sound.toggle());
-for (const type of ['pointerdown', 'keydown']) {
-  document.addEventListener(type, event => {
-    if (!event.target.closest?.('#sound-toggle')) sound.unlock();
-  }, { capture: true });
-}
+// The first pointer press starts audio. An explicit mute remains off on later clicks.
+document.addEventListener('pointerdown', event => {
+  if (!event.target.closest?.('#sound-toggle')) sound.unlock();
+}, { capture: true });
 document.addEventListener('visibilitychange', () => sound.visibilityChanged());
-// Start immediately where autoplay is allowed; otherwise leave the enable control visible.
-sound.unlock();
 
 const camera = { x: WORLD.width / 2, y: WORLD.height / 2, scale: ZOOMS[0], fromX: WORLD.width / 2, fromY: WORLD.height / 2, fromScale: ZOOMS[0], toX: WORLD.width / 2, toY: WORLD.height / 2, toScale: ZOOMS[0], elapsed: 2.4, duration: 2.4, zoomStep: 0, zoomIndex: 1 };
 const pointer = { x: innerWidth / 2, y: innerHeight / 2, inside: false, worldX: WORLD.width / 2, worldY: WORLD.height / 2 };

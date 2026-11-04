@@ -15,7 +15,6 @@ class ForestAudio {
     this.signProbe = null;
     this.nextWhisper = 0;
     this.tick = 0;
-    try { this.muted = localStorage.getItem('000-muted') === 'true'; } catch {}
   }
 
   static spatial(point, view, range = 1) {
@@ -135,9 +134,8 @@ class ForestAudio {
   }
 
   async toggle() {
-    // Autoplay may already have created a suspended context. "Enable" must resume it.
+    // Enable resumes audio; mute lasts for the current play session.
     this.muted = !this.muted && this.context?.state === 'running';
-    try { localStorage.setItem('000-muted', String(this.muted)); } catch {}
     if (this.muted) {
       if (this.context) await this.context.suspend().catch(() => {});
     } else await this.unlock();
