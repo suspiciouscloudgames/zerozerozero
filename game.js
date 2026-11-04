@@ -348,12 +348,14 @@ function roadHandles() {
     const world = { x: members.reduce((v, a) => v + a.x, 0) / members.length,
       y: members.reduce((v, a) => v + a.y, 0) / members.length };
     const screen = worldToScreen(world.x, world.y);
-    return { groupId, x: screen.x, y: screen.y - 27, world, count: members.length };
+    // Keep the action clear of the animal even at the closest magnification.
+    const offset = Math.max(42, 7 * camera.scale * fitScale() + 24);
+    return { groupId, x: screen.x, y: screen.y - offset, world, count: members.length };
   }).filter(h => inScope(h.x, h.y));
 }
 function nearestRoadHandle(x, y) {
   return roadHandles().sort((a, b) => Math.hypot(x-a.x,y-a.y)-Math.hypot(x-b.x,y-b.y))
-    .find(h => Math.hypot(x-h.x,y-h.y) < 20);
+    .find(h => Math.hypot(x-h.x,y-h.y) < 27);
 }
 function nearestRoadPoint(x, y) {
   if (camera.zoomIndex < 4 || zooming()) return null;
@@ -1299,10 +1301,22 @@ function drawRoadOverlay() {
   }
   if (camera.zoomIndex >= 4 && !zooming()) {
     for (const handle of roadHandles()) {
+      const hovered = pointer.inside && Math.hypot(pointer.x - handle.x, pointer.y - handle.y) < 27;
       ctx.save(); ctx.translate(handle.x, handle.y);
-      ctx.fillStyle = '#111a12'; ctx.strokeStyle = '#d9d1a3'; ctx.lineWidth = 1;
-      ctx.beginPath(); ctx.roundRect(-13, -12, 26, 24, 5); ctx.fill(); ctx.stroke();
-      ctx.scale(.75, .75); drawRoadCursor(); ctx.restore();
+      // A solid gold action tile stays distinct from foliage and the thin refuge rings.
+      ctx.shadowColor = '#020604'; ctx.shadowBlur = 12; ctx.shadowOffsetY = 3;
+      ctx.fillStyle = hovered ? '#ffe5a2' : '#dfbf70';
+      ctx.strokeStyle = hovered ? '#fff5cf' : '#fff0bb'; ctx.lineWidth = 1.8;
+      ctx.beginPath(); ctx.roundRect(-18, -18, 36, 36, 7); ctx.fill(); ctx.stroke();
+      ctx.shadowBlur = 0; ctx.shadowOffsetY = 0;
+      ctx.strokeStyle = '#24321f'; ctx.fillStyle = '#24321f';
+      ctx.lineWidth = 2.8; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+      // Starting point, bent trail, and arrow describe making a route.
+      ctx.beginPath(); ctx.arc(-8, 9, 2.6, 0, Math.PI * 2); ctx.fill();
+      ctx.beginPath(); ctx.moveTo(-8, 3); ctx.lineTo(-8, -1);
+      ctx.quadraticCurveTo(-8, -5, -3, -5); ctx.lineTo(9, -5); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(4, -10); ctx.lineTo(9, -5); ctx.lineTo(4, 0); ctx.stroke();
+      ctx.restore();
     }
     if (roadTool && pointer.inside && !dragState?.moved) {
       const start = worldToScreen(roadTool.anchor.x, roadTool.anchor.y);
