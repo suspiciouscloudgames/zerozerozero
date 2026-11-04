@@ -92,7 +92,7 @@ class ForestAudio {
     });
     this.ambience = this.loop(this.buffers.wind, 'lowpass', 1900);
     // This fixed, non-spatial bed is never changed by camera distance or zoom.
-    this.ambience.gain.gain.value = .24;
+    this.ambience.gain.gain.value = .10;
     this.nextBird = c.currentTime + .65;
   }
 
@@ -339,7 +339,7 @@ class ForestAudio {
       const pan = Math.random() * 1.6 - .8, pitch = 1850 + Math.random() * 1300;
       const calls = 2 + Math.floor(Math.random() * 3);
       for (let i = 0; i < calls; i++) {
-        this.tone(now + i * .19, .13, [pitch * .83, pitch * 1.2, pitch], .024, pan);
+        this.tone(now + i * .19, .13, [pitch * .83, pitch * 1.2, pitch], .012, pan);
       }
       this.nextBird = now + 4 + Math.random() * 6;
     }
