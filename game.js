@@ -10,6 +10,7 @@ function syncSoundButton() {
   soundToggle.setAttribute('aria-label', audible ? '소리 끄기' : '소리 켜기');
   soundToggle.setAttribute('aria-pressed', String(audible));
   soundToggle.title = audible ? '소리 끄기' : '소리 켜기';
+  soundToggle.querySelector('.sound-label').textContent = audible ? '' : '소리 켜기';
 }
 sound.onStateChange = syncSoundButton;
 syncSoundButton();
@@ -20,6 +21,8 @@ for (const type of ['pointerdown', 'keydown']) {
   }, { capture: true });
 }
 document.addEventListener('visibilitychange', () => sound.visibilityChanged());
+// Start immediately where autoplay is allowed; otherwise leave the enable control visible.
+sound.unlock();
 
 const camera = { x: WORLD.width / 2, y: WORLD.height / 2, scale: ZOOMS[0], fromX: WORLD.width / 2, fromY: WORLD.height / 2, fromScale: ZOOMS[0], toX: WORLD.width / 2, toY: WORLD.height / 2, toScale: ZOOMS[0], elapsed: 2.4, duration: 2.4, zoomStep: 0, zoomIndex: 1 };
 const pointer = { x: innerWidth / 2, y: innerHeight / 2, inside: false, worldX: WORLD.width / 2, worldY: WORLD.height / 2 };

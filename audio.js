@@ -54,8 +54,11 @@ class ForestAudio {
     this.master.connect(limiter); limiter.connect(c.destination);
     this.buffers = {};
     this.buffers.wind = this.buffer(11, 2, (t, i, state) => {
-      state.low = (state.low || 0) * .985 + (Math.random() * 2 - 1) * .015;
-      return state.low * 3.2 * (.65 + .17 * Math.sin(t * .8) + .12 * Math.sin(t * 1.7));
+      const noise = Math.random() * 2 - 1;
+      state.low = (state.low || 0) * .985 + noise * .015;
+      state.air = (state.air || 0) * .8 + noise * .2;
+      // A little midrange canopy air keeps the bed audible on small speakers.
+      return (state.low * 2.4 + state.air * .55) * (.72 + .13 * Math.sin(t * .8) + .1 * Math.sin(t * 1.7));
     });
     this.buffers.fire = this.buffer(7, 1, (t, i, state) => {
       const white = Math.random() * 2 - 1;
@@ -81,8 +84,9 @@ class ForestAudio {
       return (white - state.low) * Math.min(1, envelope) * (.35 + .12 * Math.sin(t * 61));
     });
     this.ambience = this.loop(this.buffers.wind, 'lowpass', 1900);
-    this.ambience.gain.gain.value = .16;
-    this.nextBird = c.currentTime + 1.5;
+    // This fixed, non-spatial bed is never changed by camera distance or zoom.
+    this.ambience.gain.gain.value = .24;
+    this.nextBird = c.currentTime + .65;
   }
 
   buffer(seconds, channels, sample) {
@@ -124,8 +128,8 @@ class ForestAudio {
   }
 
   async toggle() {
-    if (!this.context) this.muted = false;
-    else this.muted = !this.muted;
+    // Autoplay may already have created a suspended context. "Enable" must resume it.
+    this.muted = !this.muted && this.context?.state === 'running';
     try { localStorage.setItem('000-muted', String(this.muted)); } catch {}
     if (this.muted) {
       if (this.context) await this.context.suspend().catch(() => {});
